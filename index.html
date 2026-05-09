@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>laundryman — wash the noise, keep the signal</title>
+<meta name="description" content="PostToolUse hook for Claude Code. Washes noisy tool output. Keeps only errors, warnings and summaries. Up to 97% token reduction.">
+<meta property="og:title" content="laundryman — wash the noise, keep the signal">
+<meta property="og:description" content="PostToolUse hook for Claude Code. Up to 97% token reduction on pytest, cargo, docker, npm test.">
+<meta property="og:image" content="assets/laundryman.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:      #0a0a12;
+    --surface: #0f0f1a;
+    --border:  #1a1a2e;
+    --accent:  #4af0c4;
+    --blue:    #2878d8;
+    --yellow:  #f8a840;
+    --red:     #f05a4a;
+    --text:    #e8e8f0;
+    --muted:   #5a5a7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanlines */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(74,240,196,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,240,196,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px; color: var(--accent);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-logo img { width: 44px; height: auto; image-rendering: pixelated; }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 12px; font-family: 'Space Mono', monospace;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ── HERO ── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 48px; align-items: center;
+    padding: 72px 0 56px;
+  }
+
+  .pixel-tag {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px; color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 6px 12px; margin-bottom: 24px;
+    letter-spacing: .1em;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -.02em; margin-bottom: 20px;
+  }
+  h1 em { color: var(--accent); font-style: normal; }
+
+  .hero-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; color: var(--muted);
+    line-height: 1.8; margin-bottom: 36px;
+  }
+
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px; padding: 14px 20px;
+    border-radius: 2px; text-decoration: none;
+    transition: all .15s; cursor: pointer; border: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #0a0a12; }
+  .btn-primary:hover { background: #6af8d6; transform: translateY(-2px); }
+  .btn-ghost {
+    background: transparent; color: var(--text);
+    border: 2px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── MASCOT ── */
+  .mascot-wrap {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .mascot-img {
+    width: 280px; height: auto;
+    image-rendering: pixelated;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 40px rgba(40,120,216,0.4))
+            drop-shadow(0 0 80px rgba(74,240,196,0.15));
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  /* glow ring behind mascot */
+  .mascot-glow {
+    position: absolute;
+    width: 240px; height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(40,120,216,0.12) 0%, transparent 70%);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: .6; }
+    50%       { transform: scale(1.1); opacity: 1; }
+  }
+
+  /* ── STATS BAR ── */
+  .stat-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 4px;
+    overflow: hidden; margin-bottom: 72px;
+  }
+  .stat-cell {
+    background: var(--surface);
+    padding: 20px 16px; text-align: center;
+  }
+  .stat-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px; color: var(--accent);
+    display: block; margin-bottom: 8px;
+  }
+  .stat-lbl {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--muted);
+  }
+
+  /* ── SECTION LABEL ── */
+  .sec-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px; color: var(--yellow);
+    letter-spacing: .1em; margin-bottom: 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── BENCHMARKS ── */
+  .benchmarks { margin-bottom: 72px; }
+
+  .bench {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 20px 24px; margin-bottom: 10px;
+    transition: border-color .2s;
+  }
+  .bench:hover { border-color: rgba(74,240,196,.25); }
+
+  .bench-top {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 14px;
+  }
+  .bench-cmd {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; color: var(--yellow);
+  }
+  .bench-pct {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px; padding: 4px 10px;
+    border-radius: 2px;
+    background: rgba(74,240,196,.08);
+    color: var(--accent);
+    border: 1px solid rgba(74,240,196,.2);
+  }
+  .bench-pct.fire { background: rgba(240,90,74,.08); color: var(--red); border-color: rgba(240,90,74,.2); }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .bar-lbl { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); width: 44px; text-align: right; }
+  .bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; width: 0; transition: width 1.4s cubic-bezier(.4,0,.2,1); }
+  .bar-fill.b { background: var(--red); }
+  .bar-fill.a { background: var(--accent); }
+  .bar-count { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); width: 72px; }
+
+  /* ── DEMO TABS ── */
+  .demo { margin-bottom: 72px; }
+
+  .tabs { display: flex; gap: 2px; margin-bottom: -1px; position: relative; z-index: 1; }
+  .tab {
+    font-family: 'Press Start 2P', monospace; font-size: 8px;
+    padding: 10px 16px; border: 1px solid var(--border);
+    border-bottom: none; background: var(--bg);
+    color: var(--muted); cursor: pointer;
+    border-radius: 4px 4px 0 0; transition: all .15s;
+  }
+  .tab.on { background: var(--surface); color: var(--accent); border-color: rgba(74,240,196,.3); }
+
+  .panels { position: relative; }
+  .panel {
+    display: none; border: 1px solid var(--border);
+    border-radius: 0 4px 4px 4px; overflow: hidden;
+  }
+  .panel.on { display: block; }
+
+  .panel-hdr {
+    background: #080810; padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r{background:#f05a4a} .dot.y{background:#f8a840} .dot.g{background:#4af0c4}
+  .panel-name { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-left: 4px; }
+
+  .panel-cols { display: grid; grid-template-columns: 1fr 1fr; }
+  .panel-col { padding: 20px; }
+  .panel-col:first-child { border-right: 1px solid var(--border); }
+  .col-label {
+    font-family: 'Press Start 2P', monospace; font-size: 7px;
+    padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-label.d { color: var(--red); }
+  .col-label.c { color: var(--accent); }
+
+  pre {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+    max-height: 260px; overflow-y: auto; color: var(--muted);
+  }
+  pre .e { color: var(--red); }
+  pre .s { color: var(--accent); }
+  pre .w { color: var(--yellow); }
+  pre .x { opacity: .3; }
+  pre .h { color: var(--text); font-weight: 700; }
+
+  /* ── INSTALL ── */
+  .install { margin-bottom: 72px; }
+
+  .install-card {
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: 4px;
+    overflow: hidden;
+  }
+  .itabs { display: flex; border-bottom: 1px solid var(--border); }
+  .itab {
+    font-family: 'Press Start 2P', monospace; font-size: 7px;
+    padding: 14px 18px; cursor: pointer; color: var(--muted);
+    border-right: 1px solid var(--border);
+    background: transparent; border-top: none; border-left: none; border-bottom: none;
+    transition: all .15s;
+  }
+  .itab.on { color: var(--accent); background: rgba(74,240,196,.05); }
+
+  .icontent { padding: 28px; }
+  .ic { display: none; }
+  .ic.on { display: block; }
+
+  .cmd-block {
+    background: #06060e; border: 1px solid var(--border);
+    border-radius: 3px; padding: 14px 18px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--accent); margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; cursor: pointer; transition: border-color .2s;
+  }
+  .cmd-block:hover { border-color: rgba(74,240,196,.4); }
+  .cpbtn {
+    font-family: 'Press Start 2P', monospace; font-size: 7px;
+    color: var(--muted); background: none; border: none;
+    cursor: pointer; flex-shrink: 0; transition: color .2s;
+  }
+  .cpbtn:hover, .cpbtn.ok { color: var(--accent); }
+  .install-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    margin-top: 16px; line-height: 1.8;
+  }
+  .install-note a { color: var(--accent); text-decoration: none; }
+
+  /* ── MASCOT FEATURE ── */
+  .mascot-section {
+    display: grid; grid-template-columns: 200px 1fr;
+    gap: 40px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 32px;
+    margin-bottom: 72px;
+  }
+  .mascot-section img {
+    width: 180px; image-rendering: pixelated;
+    filter: drop-shadow(0 0 20px rgba(40,120,216,0.5));
+  }
+  .mascot-text h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px; color: var(--yellow);
+    margin-bottom: 16px; letter-spacing: .05em;
+  }
+  .mascot-text p {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; color: var(--muted);
+    line-height: 1.8; margin-bottom: 12px;
+  }
+
+  /* ── ROADMAP ── */
+  .roadmap { margin-bottom: 72px; }
+  .road-item {
+    display: flex; gap: 16px; padding: 16px 0;
+    border-bottom: 1px solid var(--border); align-items: flex-start;
+  }
+  .road-item:last-child { border-bottom: none; }
+  .road-badge {
+    font-family: 'Press Start 2P', monospace; font-size: 6px;
+    padding: 4px 8px; border-radius: 2px; flex-shrink: 0; margin-top: 3px;
+  }
+  .road-badge.done { background: rgba(74,240,196,.1); color: var(--accent); }
+  .road-badge.soon { background: rgba(248,168,64,.1); color: var(--yellow); }
+  .road-badge.wait { background: rgba(90,90,122,.1); color: var(--muted); }
+  .road-txt { font-size: 14px; line-height: 1.5; }
+  .road-txt small { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .road-txt a { color: var(--accent); text-decoration: none; font-size: 10px; }
+  .road-txt a:hover { text-decoration: underline; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-left {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .footer-left img { width: 52px; image-rendering: pixelated; }
+  .footer-name { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--accent); }
+  .footer-right { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ── REVEAL ── */
+  .rev { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .rev.vis { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 680px) {
+    .hero { grid-template-columns: 1fr; }
+    .mascot-wrap { order: -1; }
+    .mascot-img { width: 220px; height: auto; }
+    .stat-bar { grid-template-columns: repeat(2,1fr); }
+    .panel-cols { grid-template-columns: 1fr; }
+    .panel-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .mascot-section { grid-template-columns: 1fr; text-align: center; }
+    .mascot-section img { margin: 0 auto; display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">
+      <img src="assets/laundryman.png" alt="laundryman mascot">
+      laundryman
+    </div>
+    <div class="nav-links">
+      <a href="#benchmarks">benchmarks</a>
+      <a href="#demo">demo</a>
+      <a href="#install">install</a>
+      <a href="https://github.com/dhiegopimenta/laundryman">github ↗</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="pixel-tag">★ PostToolUse Hook · Claude Code ★</div>
+      <h1>wash the noise,<br><em>keep the signal</em></h1>
+      <p class="hero-sub">
+        Claude Code dumps thousands of PASSED lines into context on every test run.<br>
+        laundryman intercepts, filters, and hands Claude only what matters:<br>
+        failures, warnings, and summaries.
+      </p>
+      <div class="cta-row">
+        <a href="#install" class="btn btn-primary">🧺 install now</a>
+        <a href="https://github.com/dhiegopimenta/laundryman" class="btn btn-ghost">★ github</a>
+      </div>
+    </div>
+    <div class="mascot-wrap">
+      <div class="mascot-glow"></div>
+      <img class="mascot-img" src="assets/laundryman.png" alt="Laundryman — pixel art character wearing a laundry basket helmet">
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stat-bar rev">
+    <div class="stat-cell">
+      <span class="stat-num">97%</span>
+      <div class="stat-lbl">pytest reduction</div>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">82%</span>
+      <div class="stat-lbl">docker reduction</div>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">64%</span>
+      <div class="stat-lbl">cargo reduction</div>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">0</span>
+      <div class="stat-lbl">dependencies</div>
+    </div>
+  </div>
+
+  <!-- MASCOT FEATURE -->
+  <div class="mascot-section rev">
+    <img src="assets/laundryman.png" alt="Laundryman character">
+    <div class="mascot-text">
+      <h2>meet laundryman</h2>
+      <p>
+        He's serious. He's blue. He wears a laundry basket on his head and he will
+        not tolerate a single unnecessary PASSED line in your Claude Code context.
+      </p>
+      <p>
+        Every time you run a test suite, laundryman intercepts the output via
+        Claude Code's PostToolUse hook — strips the noise, keeps the failures,
+        and hands Claude a clean report.
+      </p>
+      <p style="color: var(--accent);">
+        518 lines in → 17 lines out. 97% washed. 🧺
+      </p>
+    </div>
+  </div>
+
+  <!-- BENCHMARKS -->
+  <section class="benchmarks rev" id="benchmarks">
+    <div class="sec-label">real benchmarks — measured, not estimated</div>
+
+    <div class="bench">
+      <div class="bench-top">
+        <span class="bench-cmd">$ pytest -v tests/ &nbsp;·&nbsp; 500 tests</span>
+        <span class="bench-pct fire">97% washed</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--red)">before</span>
+        <div class="bar-track"><div class="bar-fill b" data-w="100"></div></div>
+        <span class="bar-count" style="color:var(--muted)">518 lines</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--accent)">after</span>
+        <div class="bar-track"><div class="bar-fill a" data-w="3.3"></div></div>
+        <span class="bar-count" style="color:var(--accent)">17 lines ✓</span>
+      </div>
+    </div>
+
+    <div class="bench">
+      <div class="bench-top">
+        <span class="bench-cmd">$ docker logs myapp --tail 200</span>
+        <span class="bench-pct">82% washed</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--red)">before</span>
+        <div class="bar-track"><div class="bar-fill b" data-w="100"></div></div>
+        <span class="bar-count" style="color:var(--muted)">17 lines</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--accent)">after</span>
+        <div class="bar-track"><div class="bar-fill a" data-w="18"></div></div>
+        <span class="bar-count" style="color:var(--accent)">3 lines ✓</span>
+      </div>
+    </div>
+
+    <div class="bench">
+      <div class="bench-top">
+        <span class="bench-cmd">$ cargo build &nbsp;·&nbsp; 30 crates</span>
+        <span class="bench-pct">64% washed</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--red)">before</span>
+        <div class="bar-track"><div class="bar-fill b" data-w="100"></div></div>
+        <span class="bar-count" style="color:var(--muted)">25 lines</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--accent)">after</span>
+        <div class="bar-track"><div class="bar-fill a" data-w="36"></div></div>
+        <span class="bar-count" style="color:var(--accent)">9 lines ✓</span>
+      </div>
+    </div>
+
+    <div class="bench">
+      <div class="bench-top">
+        <span class="bench-cmd">$ npm test &nbsp;·&nbsp; 300 tests (jest)</span>
+        <span class="bench-pct">32% washed</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--red)">before</span>
+        <div class="bar-track"><div class="bar-fill b" data-w="100"></div></div>
+        <span class="bar-count" style="color:var(--muted)">31 lines</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl" style="color:var(--accent)">after</span>
+        <div class="bar-track"><div class="bar-fill a" data-w="68"></div></div>
+        <span class="bar-count" style="color:var(--accent)">21 lines ✓</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section class="demo rev" id="demo">
+    <div class="sec-label">before / after — real output</div>
+    <div class="tabs">
+      <button class="tab on" onclick="tab('pytest',this)">pytest</button>
+      <button class="tab" onclick="tab('npm',this)">npm test</button>
+      <button class="tab" onclick="tab('docker',this)">docker</button>
+      <button class="tab" onclick="tab('cargo',this)">cargo</button>
+    </div>
+    <div class="panels">
+
+      <div class="panel on" id="p-pytest">
+        <div class="panel-hdr">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="panel-name">pytest -v tests/ — 500 tests, 3 failures</span>
+        </div>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div class="col-label d">☠ before — 518 lines</div>
+            <pre><span class="x">platform linux -- Python 3.11.4</span>
+<span class="x">rootdir: /home/user/myproject</span>
+<span class="x">plugins: anyio-3.7.1, cov-4.1.0</span>
+<span class="x">collecting ... 500 items</span>
+<span class="x">PASSED test_models.py::test_user_0 .. 0.001s</span>
+<span class="x">PASSED test_models.py::test_user_1 .. 0.001s</span>
+<span class="x">PASSED test_models.py::test_user_2 .. 0.002s</span>
+<span class="x">... (200 more PASSED lines)</span>
+<span class="e">FAILED test_auth.py::test_login_wrong_password</span>
+<span class="x">PASSED test_api.py::test_endpoint_0 .. 0.031s</span>
+<span class="x">... (150 more PASSED lines)</span>
+<span class="e">FAILED test_payment.py::test_charge_declined</span>
+<span class="x">... (100 more PASSED lines)</span>
+<span class="e">FAILED test_email.py::test_send_confirmation</span>
+<span class="x">... (47 more PASSED lines)</span></pre>
+          </div>
+          <div class="panel-col">
+            <div class="col-label c">✓ after laundryman — 17 lines</div>
+            <pre><span class="s">[🧺 laundryman] 518→17 lines (97% washed)</span>
+
+<span class="e">FAILED test_auth.py::test_login_wrong_password</span>
+<span class="e"> AssertionError: assert 200 == 401</span>
+<span class="e"> POST /api/auth/login wrong credentials</span>
+
+<span class="e">FAILED test_payment.py::test_charge_declined</span>
+<span class="e"> KeyError: "stripe_secret" not in env</span>
+
+<span class="e">FAILED test_email.py::test_send_confirmation</span>
+<span class="e"> SMTPException: conn refused :587</span>
+
+<span class="h">3 failed, 497 passed in 45.3s</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-npm">
+        <div class="panel-hdr">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="panel-name">npm test — 300 tests (jest), 2 failures</span>
+        </div>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div class="col-label d">☠ before — 31 lines</div>
+            <pre><span class="x"> PASS  src/__tests__/utils.test.ts</span>
+<span class="x">  ✓ formatDate returns correct (3ms)</span>
+<span class="x">  ✓ parseAmount handles decimals (1ms)</span>
+<span class="x">  ✓ validateEmail rejects invalid (2ms)</span>
+<span class="x"> PASS  src/__tests__/api.test.ts</span>
+<span class="x">  ✓ GET /users returns 200 (45ms)</span>
+<span class="x">  ✓ POST /users creates user (67ms)</span>
+<span class="e"> FAIL  src/__tests__/auth.test.ts</span>
+<span class="x">  ✓ login valid credentials (23ms)</span>
+<span class="e">  ✗ login expired token → 401 (12ms)</span>
+<span class="e"> FAIL  src/__tests__/payment.test.ts</span>
+<span class="e">  ✗ webhook signature fails (3ms)</span></pre>
+          </div>
+          <div class="panel-col">
+            <div class="col-label c">✓ after laundryman — 21 lines</div>
+            <pre><span class="s">[🧺 laundryman] 31→21 lines (32% washed)</span>
+
+<span class="e"> FAIL  src/__tests__/auth.test.ts</span>
+<span class="e">  ✗ login with expired token → 401</span>
+
+<span class="e"> FAIL  src/__tests__/payment.test.ts</span>
+<span class="e">  ✗ webhook signature fails silently</span>
+
+<span class="e">● auth › login with expired token</span>
+<span class="e">  Expected: 401  Received: 200</span>
+<span class="e">  at auth.test.ts:45:5</span>
+
+<span class="e">● payment › webhook signature</span>
+<span class="e">  Expected: Error  Received: undefined</span>
+
+<span class="h">Tests: 2 failed, 298 passed — 8.4s</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-docker">
+        <div class="panel-hdr">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="panel-name">docker logs myapp — 1h of logs</span>
+        </div>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div class="col-label d">☠ before — 17 lines</div>
+            <pre><span class="x">07:00:15Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:00:30Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:01:00Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:01:30Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:02:00Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:02:14Z INFO POST /api/users 201</span>
+<span class="x">07:02:30Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:03:00Z INFO GET / 200 - healthcheck</span>
+<span class="e">07:03:45Z ERROR Redis ECONNREFUSED :6379</span>
+<span class="w">07:03:45Z WARN  Fallback to in-memory cache</span>
+<span class="x">07:04:00Z INFO GET / 200 - healthcheck</span>
+<span class="x">07:04:30Z INFO GET / 200 - healthcheck</span>
+<span class="e">07:05:00Z ERROR Stripe webhook: bad signature</span></pre>
+          </div>
+          <div class="panel-col">
+            <div class="col-label c">✓ after laundryman — 3 lines</div>
+            <pre><span class="s">[🧺 laundryman] 17→3 lines (82% washed)</span>
+
+<span class="e">07:03:45Z ERROR Redis connection failed:
+           ECONNREFUSED 127.0.0.1:6379</span>
+<span class="w">07:03:45Z WARN  Fallback to in-memory cache</span>
+<span class="e">07:05:00Z ERROR Stripe webhook:
+           invalid signature</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-cargo">
+        <div class="panel-hdr">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="panel-name">cargo build — 30 crates</span>
+        </div>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div class="col-label d">☠ before — 25 lines</div>
+            <pre><span class="x">   Updating crates.io index</span>
+<span class="x">  Downloaded serde v1.0.193</span>
+<span class="x">  Downloaded tokio v1.35.1</span>
+<span class="x">   Compiling proc-macro2 v1.0.70</span>
+<span class="x">   Compiling unicode-ident v1.0.12</span>
+<span class="x">   Compiling quote v1.0.33</span>
+<span class="x">   Compiling syn v2.0.39</span>
+<span class="x">   Compiling serde v1.0.193</span>
+<span class="x">   Compiling tokio v1.35.1</span>
+<span class="x">   Compiling myapp v0.1.0</span>
+<span class="w">warning: unused variable `config`</span>
+<span class="x">  --> src/main.rs:42:9</span>
+<span class="w">warning: fn `legacy_handler` never used</span>
+<span class="x">  --> src/handlers.rs:87:4</span>
+<span class="x">    Finished dev in 23.45s</span></pre>
+          </div>
+          <div class="panel-col">
+            <div class="col-label c">✓ after laundryman — 9 lines</div>
+            <pre><span class="s">[🧺 laundryman] 25→9 lines (64% washed)</span>
+
+<span class="w">warning: unused variable `config`</span>
+<span class="x">  --> src/main.rs:42:9</span>
+<span class="x">   |</span>
+<span class="x">42 |   let config = load_config();</span>
+<span class="x">   |       ^^^^^^ prefix: `_config`</span>
+
+<span class="w">warning: fn `legacy_handler` never used</span>
+<span class="x">  --> src/handlers.rs:87:4</span></pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="install rev" id="install">
+    <div class="sec-label">install — one line, done</div>
+    <div class="install-card">
+      <div class="itabs">
+        <button class="itab on" onclick="itab('mac',this)">macOS / Linux</button>
+        <button class="itab" onclick="itab('win',this)">Windows</button>
+        <button class="itab" onclick="itab('skills',this)">npx skills</button>
+        <button class="itab" onclick="itab('manual',this)">manual</button>
+      </div>
+      <div class="icontent">
+        <div class="ic on" id="ic-mac">
+          <div class="cmd-block" onclick="copy(this,'bash <(curl -s https://raw.githubusercontent.com/dhiegopimenta/laundryman/main/install.sh)')">
+            <span>bash &lt;(curl -s .../install.sh)</span>
+            <button class="cpbtn">copy</button>
+          </div>
+          <div class="install-note">Installs hook + registers in <code>~/.claude/settings.json</code> automatically. Requires Node.js ≥ 16.</div>
+        </div>
+        <div class="ic" id="ic-win">
+          <div class="cmd-block" onclick="copy(this,'irm https://raw.githubusercontent.com/dhiegopimenta/laundryman/main/install.ps1 | iex')">
+            <span>irm .../install.ps1 | iex</span>
+            <button class="cpbtn">copy</button>
+          </div>
+          <div class="install-note">Run in PowerShell as normal user. Requires Node.js ≥ 16.</div>
+        </div>
+        <div class="ic" id="ic-skills">
+          <div class="cmd-block" onclick="copy(this,'npx skills add dhiegopimenta/laundryman')">
+            <span>npx skills add dhiegopimenta/laundryman</span>
+            <button class="cpbtn">copy</button>
+          </div>
+          <div class="install-note">Works with Claude Code, Cursor, Windsurf, Cline, Copilot and 40+ agents via <a href="https://skills.sh" target="_blank">skills.sh ↗</a></div>
+        </div>
+        <div class="ic" id="ic-manual">
+          <div class="cmd-block" onclick="copy(this,'git clone https://github.com/dhiegopimenta/laundryman && cd laundryman && bash install.sh')">
+            <span>git clone .../laundryman && bash install.sh</span>
+            <button class="cpbtn">copy</button>
+          </div>
+          <div class="install-note">
+            Uninstall: <code>bash install.sh --uninstall</code><br>
+            Zero dependencies. Pure Node.js built-ins only.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section class="roadmap rev">
+    <div class="sec-label">roadmap</div>
+    <div class="road-item">
+      <span class="road-badge done">v0.1 ✓</span>
+      <div class="road-txt">
+        PostToolUse hook — pytest, npm test, cargo, docker, git filters
+        <small>Zero deps. Install in one line. Tested and working.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge soon">next</span>
+      <div class="road-txt">
+        Custom rules via <code>.laundryman.json</code>
+        <small>Define your own filters per project. PRs welcome.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge soon">next</span>
+      <div class="road-txt">
+        More filters — gradle, make, dotnet test, go test, mvn
+        <small>Open an issue to request your stack.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge wait">waiting</span>
+      <div class="road-txt">
+        <code>replaceToolOutput</code> — true output replacement, no original noise at all
+        <small>Blocked on Anthropic. <a href="https://github.com/anthropics/claude-code/issues/53330" target="_blank">Track issue #53330 →</a> When this ships, savings go from ~70% to ~99% effective.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge wait">waiting</span>
+      <div class="road-txt">
+        <code>replaceUserMessage</code> — input compression
+        <small>Same issue. laundryman will expand to cover input too when available.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">
+      <img src="assets/laundryman.png" alt="laundryman">
+      <div>
+        <div class="footer-name">laundryman</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px">wash the noise · keep the signal</div>
+      </div>
+    </div>
+    <div class="footer-right">MIT · Claude Code ecosystem · PRs welcome</div>
+  </footer>
+
+</div>
+<script>
+  function tab(id, el) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('p-'+id).classList.add('on');
+  }
+
+  function itab(id, el) {
+    document.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.ic').forEach(c=>c.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('ic-'+id).classList.add('on');
+  }
+
+  function copy(block, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = block.querySelector('.cpbtn');
+      btn.textContent = 'copied! ✓'; btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 2000);
+    });
+  }
+
+  // Animate bars on scroll
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('vis');
+        e.target.querySelectorAll('.bar-fill').forEach(b => {
+          setTimeout(() => b.style.width = b.dataset.w + '%', 150);
+        });
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.rev').forEach(el => {
+    obs.observe(el);
+    el.querySelectorAll('.bar-fill').forEach(b => b.style.width = '0');
+  });
+</script>
+</body>
+</html>

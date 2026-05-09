@@ -1,0 +1,30 @@
+{
+  "name": "laundryman",
+  "version": "0.1.0",
+  "description": "🧺 Washes noisy Claude Code tool output. Keeps only errors, warnings and summaries.",
+  "keywords": ["claude-code", "tokens", "optimization", "hooks", "ai", "anthropic", "posttooluse"],
+  "homepage": "https://dhiego-coelho.github.io/laundryman",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhiego-coelho/laundryman.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "files": [
+    "hooks/",
+    "assets/",
+    "install.sh",
+    "install.ps1",
+    "SKILL.md",
+    "README.md",
+    "CONTRIBUTING.md"
+  ],
+  "scripts": {
+    "test": "node hooks/laundryman.js",
+    "test:pytest": "echo '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"pytest -v\"},\"tool_response\":{\"output\":\"platform linux -- Python 3.11\\nrootdir: /home/user\\nplugins: anyio\\nPASSED tests/test_a.py::test_1 ... 0.001s\\nPASSED tests/test_a.py::test_2 ... 0.001s\\nPASSED tests/test_a.py::test_3 ... 0.001s\\nFAILED tests/test_auth.py::test_login - AssertionError: 200 != 401\\n1 failed, 3 passed in 1.2s\"}}' | node hooks/laundryman.js",
+    "test:docker": "echo '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"docker logs app\"},\"tool_response\":{\"output\":\"INFO GET / 200 healthcheck\\nINFO GET / 200 healthcheck\\nERROR Redis ECONNREFUSED\\nWARN fallback to memory\\nINFO GET / 200 healthcheck\"}}' | node hooks/laundryman.js"
+  }
+}
