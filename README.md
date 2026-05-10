@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D16-brightgreen)](https://nodejs.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-PostToolUse%20%2B%20UserPromptSubmit-4af0c4)](https://docs.anthropic.com/claude-code)
-[![Zero deps](https://img.shields.io/badge/dependencies-0-blue)](package.json)
+[![1 dep](https://img.shields.io/badge/dependencies-1%20(MCP%20SDK)-blue)](package.json)
 
 [🌐 **dhiegopimenta.github.io/laundryman**](https://dhiegopimenta.github.io/laundryman/) · [⚡ Install](#install) · [📊 Benchmarks](#benchmarks) · [🤝 Contributing](CONTRIBUTING.md)
 
@@ -149,6 +149,18 @@ Categories `politeness` and `fillers` are disabled by default due to semantic ri
 
 ---
 
+## Two modes
+
+| Mode | How | Today | Future |
+|------|-----|-------|--------|
+| 🔧 **Hook** (automatic) | PostToolUse fires on every Bash call | `additionalContext` — original still reaches Claude | `replaceToolOutput` ships → true replacement |
+| 🚀 **MCP** (opt-in, **best today**) | Claude calls `laundryman:run_tests` / `run_docker_logs` | **True replacement** — filtered output only | Same, already optimal |
+| ⚡ **Hook v2** (coming) | Automatic, no instruction needed | — | `updatedBuiltinToolOutput` via [issue #36843](https://github.com/anthropics/claude-code/issues/36843) |
+
+**MCP mode is the highest-value option right now.** When Claude calls an MCP tool, the returned content IS the result — no original noise attached. Setup in [docs/mcp-mode.md](docs/mcp-mode.md).
+
+---
+
 ## What gets washed
 
 | Tool | Noise removed | Signal kept |
@@ -168,6 +180,7 @@ Categories `politeness` and `fillers` are disabled by default due to semantic ri
 
 - [x] `PostToolUse` hook — pytest, npm, cargo, docker, git
 - [x] `UserPromptSubmit` hook — greetings filter with contributable `dictionary/stopwords.json`
+- [x] MCP server — `run_tests` (pytest/jest/cargo/go) + `run_docker_logs` with true output replacement
 - [ ] Custom rules via `.laundryman.json` — per-project filter config
 - [ ] More tool filters — gradle, make, dotnet test, go test, mvn
 - [ ] `replaceToolOutput` support *(waiting on Anthropic — [issue #53330](https://github.com/anthropics/claude-code/issues/53330))*

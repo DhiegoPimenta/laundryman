@@ -441,8 +441,8 @@
       <div class="stat-lbl">cargo noise filtered</div>
     </div>
     <div class="stat-cell">
-      <span class="stat-num">0</span>
-      <div class="stat-lbl">dependencies</div>
+      <span class="stat-num">1</span>
+      <div class="stat-lbl">dependency (MCP SDK)</div>
     </div>
   </div>
 
@@ -775,6 +775,13 @@
       <div class="road-txt">
         UserPromptSubmit hook — greetings filter with contributable dictionary
         <small>Strips "olá, oi, hello, hey…" from prompts. <code>dictionary/stopwords.json</code> — add your language via PR.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge done">v0.1 ✓</span>
+      <div class="road-txt">
+        MCP server — <code>run_tests</code> + <code>run_docker_logs</code> with true output replacement
+        <small>Claude calls the MCP tool → receives filtered output only. No original noise. Works today. See <a href="docs/mcp-mode.md">docs/mcp-mode.md</a></small>
       </div>
     </div>
     <div class="road-item">
