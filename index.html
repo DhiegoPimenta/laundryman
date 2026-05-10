@@ -736,14 +736,14 @@
             <span>bash &lt;(curl -s .../install.sh)</span>
             <button class="cpbtn">copy</button>
           </div>
-          <div class="install-note">Installs hook + registers in <code>~/.claude/settings.json</code> automatically. Requires Node.js ≥ 16.</div>
+          <div class="install-note">Registers MCP server + PostToolUse hook in <code>~/.claude/settings.json</code>. Prompts to create a CLAUDE.md template. Requires Node.js ≥ 16.</div>
         </div>
         <div class="ic" id="ic-win">
           <div class="cmd-block" onclick="copy(this,'irm https://raw.githubusercontent.com/dhiegopimenta/laundryman/main/install.ps1 | iex')">
             <span>irm .../install.ps1 | iex</span>
             <button class="cpbtn">copy</button>
           </div>
-          <div class="install-note">Run in PowerShell as normal user. Requires Node.js ≥ 16.</div>
+          <div class="install-note">Registers MCP server + PostToolUse hook in <code>~/.claude/settings.json</code>. Prompts to create a CLAUDE.md template. Requires Node.js ≥ 16.</div>
         </div>
         <div class="ic" id="ic-skills">
           <div class="cmd-block" onclick="copy(this,'npx skills add dhiegopimenta/laundryman')">
@@ -816,22 +816,22 @@
     <div class="road-item">
       <span class="road-badge done">v0.1 ✓</span>
       <div class="road-txt">
-        PostToolUse hook — pytest, npm test, cargo, docker, git filters
-        <small>Zero deps. Install in one line. Tested and working.</small>
-      </div>
-    </div>
-    <div class="road-item">
-      <span class="road-badge done">v0.1 ✓</span>
-      <div class="road-txt">
-        UserPromptSubmit hook — greetings filter with contributable dictionary
-        <small>Strips "olá, oi, hello, hey…" from prompts. <code>dictionary/stopwords.json</code> — add your language via PR.</small>
-      </div>
-    </div>
-    <div class="road-item">
-      <span class="road-badge done">v0.1 ✓</span>
-      <div class="road-txt">
         MCP server — <code>run_tests</code> + <code>run_docker_logs</code> with true output replacement
         <small>Claude calls the MCP tool → receives filtered output only. No original noise. Works today. See <a href="docs/mcp-mode.md">docs/mcp-mode.md</a></small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge done">v0.1 ✓</span>
+      <div class="road-txt">
+        PostToolUse hook — pytest, npm test, cargo, docker, git filters (automatic, additive today)
+        <small>Fires on every Bash call. Becomes true replacement when <code>replaceToolOutput</code> ships.</small>
+      </div>
+    </div>
+    <div class="road-item">
+      <span class="road-badge done">v0.1 ✓</span>
+      <div class="road-txt">
+        UserPromptSubmit hook — greetings filter with contributable dictionary (opt-in)
+        <small>Strips "olá, oi, hello, hey…" from prompts. <code>dictionary/stopwords.json</code> — add your language via PR.</small>
       </div>
     </div>
     <div class="road-item">
@@ -851,15 +851,15 @@
     <div class="road-item">
       <span class="road-badge wait">waiting</span>
       <div class="road-txt">
-        <code>replaceToolOutput</code> — true output replacement, no original noise at all
-        <small>Blocked on Anthropic. <a href="https://github.com/anthropics/claude-code/issues/53330" target="_blank">Track issue #53330 →</a> When this ships, savings go from ~70% to ~99% effective.</small>
+        <code>replaceToolOutput</code> — hook becomes true replacement, no original noise
+        <small>Blocked on Anthropic. <a href="https://github.com/anthropics/claude-code/issues/36843" target="_blank">Track issue #36843 →</a> When this ships, hook mode reaches full savings automatically.</small>
       </div>
     </div>
     <div class="road-item">
       <span class="road-badge wait">waiting</span>
       <div class="road-txt">
-        <code>replaceUserMessage</code> — true prompt replacement
-        <small>input-cleaner.js exists but uses additionalContext today. <a href="https://github.com/anthropics/claude-code/issues/53330" target="_blank">Track issue #53330 →</a></small>
+        <code>replaceUserMessage</code> — true prompt replacement for input-cleaner
+        <small>input-cleaner.js exists and is installed, waiting for API support. <a href="https://github.com/anthropics/claude-code/issues/36843" target="_blank">Track issue #36843 →</a></small>
       </div>
     </div>
   </section>

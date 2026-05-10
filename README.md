@@ -190,7 +190,22 @@ Strips greetings from prompts using `dictionary/stopwords.json`. To enable manua
 }
 ```
 
+The installed path is `~/.claude/laundryman/hooks/input-cleaner.js`.
+
 See [`dictionary/CONTRIBUTING.md`](dictionary/CONTRIBUTING.md) to add words or new languages.
+
+---
+
+## After install — quick start
+
+1. **Restart Claude Code** to load the MCP server
+2. **Add to your project's `CLAUDE.md`** (or answer `y` when the installer asks):
+   ```
+   When running any test suite, use laundryman:run_tests instead of Bash.
+   When checking container logs, use laundryman:run_docker_logs instead of Bash.
+   ```
+3. **Ask Claude to run your tests** — it will call `laundryman:run_tests` and return filtered output only
+4. **The PostToolUse hook** is already active and fires automatically on every Bash call
 
 ---
 
@@ -209,6 +224,11 @@ See [`dictionary/CONTRIBUTING.md`](dictionary/CONTRIBUTING.md) to add words or n
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, Node.js requirements, how to run the hook locally, and how to add new filters.
+
+**Running the test suite:**
+```bash
+node tests/run.js   # 31 tests — PASS/FAIL format
+```
 
 PRs welcome — especially new tool filters! Open an issue to request your stack.
 
