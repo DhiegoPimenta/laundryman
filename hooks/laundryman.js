@@ -1,28 +1,12 @@
 #!/usr/bin/env node
-/**
- * 🧺 laundryman — PostToolUse hook for Claude Code
- * Washes noisy tool output. Only stains (errors/warnings) remain.
- *
- * How it works:
- *   Claude Code calls this script after every tool execution.
- *   We read the JSON payload from stdin, detect the command type,
- *   filter the output, and print a compressed version back.
- *   Claude sees only what matters — failures, warnings, summaries.
- *
- * Token savings (approximate):
- *   pytest -v      →  up to 90% reduction
- *   npm test       →  up to 80% reduction
- *   cargo build    →  up to 70% reduction
- *   docker logs    →  up to 85% reduction
- *
- * -------------------------------------------------------------------
- * 🇧🇷 Como funciona:
- *   O Claude Code chama este script após cada execução de ferramenta.
- *   Lemos o payload JSON do stdin, detectamos o tipo de comando,
- *   filtramos o output e devolvemos uma versão comprimida.
- *   O Claude vê apenas o que importa — falhas, warnings, resumos.
- * -------------------------------------------------------------------
- */
+// WARNING: today this hook uses additionalContext which is additive —
+// the original noisy output still reaches Claude alongside the filtered version.
+// This does NOT reduce context size today. True output replacement requires
+// replaceToolOutput from Anthropic. Track: github.com/anthropics/claude-code/issues/36843
+// For true replacement today, use MCP mode: docs/mcp-mode.md
+//
+// 🧺 laundryman — PostToolUse hook for Claude Code
+// Washes noisy tool output. Only stains (errors/warnings) remain.
 
 const readline = require("readline");
 

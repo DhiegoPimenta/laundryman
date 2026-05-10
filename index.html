@@ -409,12 +409,12 @@
   <!-- HERO -->
   <section class="hero">
     <div>
-      <div class="pixel-tag">★ PostToolUse · UserPromptSubmit · MCP · Claude Code ★</div>
+      <div class="pixel-tag">★ MCP · PostToolUse · Claude Code ★</div>
       <h1>wash the noise,<br><em>keep the signal</em></h1>
       <p class="hero-sub">
         Claude Code dumps thousands of PASSED lines into context on every test run.<br>
-        laundryman intercepts, filters, and hands Claude only what matters.<br>
-        A second hook strips greetings from prompts. An MCP server gives true output replacement today.
+        laundryman's MCP server intercepts and returns only what matters — true replacement today.<br>
+        A PostToolUse hook fires automatically on every Bash call, ready for when Anthropic ships replaceToolOutput.
       </p>
       <div class="cta-row">
         <a href="#install" class="btn btn-primary">🧺 install now</a>
@@ -457,13 +457,13 @@
         not tolerate a single unnecessary PASSED line in your Claude Code context.
       </p>
       <p>
-        Every time you run a test suite, laundryman intercepts the output via
-        Claude Code's PostToolUse hook — strips the noise, keeps the failures,
-        and hands Claude a clean report. A second hook silently cleans your prompts.
+        The MCP server gives you true output replacement right now — Claude calls
+        <code style="color:var(--yellow);font-size:10px">laundryman:run_tests</code>
+        and receives only the filtered result. No original noise. No compromise.
       </p>
       <p>
-        For true output replacement right now — no original noise at all — the MCP server
-        returns only the filtered result. Hook mode gets there automatically when
+        The PostToolUse hook fires automatically on every Bash call. Today it's additive
+        (original still arrives alongside the filter). It becomes true replacement the moment
         Anthropic ships <code style="color:var(--yellow);font-size:10px">replaceToolOutput</code>.
       </p>
       <p style="color: var(--accent);">
@@ -782,16 +782,16 @@
         </thead>
         <tbody>
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:14px 16px;color:var(--text)">🔧 <b>Hook</b> (automatic)</td>
-            <td style="padding:14px 16px;color:var(--muted)">PostToolUse fires on every Bash call</td>
-            <td style="padding:14px 16px;color:var(--yellow)">additionalContext — original still reaches Claude</td>
-            <td style="padding:14px 16px;color:var(--accent)">replaceToolOutput ships → true replacement</td>
+            <td style="padding:14px 16px;color:var(--accent)">🚀 <b>MCP</b> — best today</td>
+            <td style="padding:14px 16px;color:var(--muted)">Claude calls <code>laundryman:run_tests</code></td>
+            <td style="padding:14px 16px;color:var(--accent)"><b>✅ True replacement — works now</b></td>
+            <td style="padding:14px 16px;color:var(--accent)">Same, already optimal</td>
           </tr>
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:14px 16px;color:var(--accent)">🚀 <b>MCP</b> (opt-in, best today)</td>
-            <td style="padding:14px 16px;color:var(--muted)">Claude calls <code>laundryman:run_tests</code></td>
-            <td style="padding:14px 16px;color:var(--accent)"><b>True replacement — works now</b></td>
-            <td style="padding:14px 16px;color:var(--accent)">Same, already optimal</td>
+            <td style="padding:14px 16px;color:var(--text)">🔧 <b>Hook</b> (automatic)</td>
+            <td style="padding:14px 16px;color:var(--muted)">PostToolUse fires on every Bash call</td>
+            <td style="padding:14px 16px;color:var(--yellow)">⚠️ Additive — original still reaches Claude</td>
+            <td style="padding:14px 16px;color:var(--accent)">✅ True replacement when replaceToolOutput ships</td>
           </tr>
           <tr>
             <td style="padding:14px 16px;color:var(--muted)">⚡ Hook v2 (coming)</td>
@@ -804,9 +804,9 @@
     </div>
 
     <div style="margin-top:20px;padding:16px 20px;background:var(--surface);border:1px solid rgba(74,240,196,.2);border-radius:4px;font-family:'Space Mono',monospace;font-size:11px;line-height:1.8;color:var(--muted)">
-      <span style="color:var(--accent)">Hook mode today:</span> original 518 lines + 17 lines filtered = 535 lines to Claude<br>
-      <span style="color:var(--accent)">MCP mode today:</span> 17 lines filtered only = 17 lines to Claude<br>
-      <span style="color:var(--muted)">Setup MCP → <a href="https://github.com/dhiegopimenta/laundryman/blob/main/docs/mcp-mode.md" style="color:var(--accent);text-decoration:none" target="_blank">docs/mcp-mode.md ↗</a></span>
+      <span style="color:var(--yellow)">Hook mode today:</span> original 518 lines + 17 filtered = <b style="color:var(--yellow)">535 lines to Claude</b> ⚠️ additive<br>
+      <span style="color:var(--accent)">MCP mode today: </span> 17 filtered lines only = <b style="color:var(--accent)">17 lines to Claude</b> ✅ true replacement<br>
+      <span style="color:var(--muted)">MCP setup → <a href="https://github.com/dhiegopimenta/laundryman/blob/main/docs/mcp-mode.md" style="color:var(--accent);text-decoration:none" target="_blank">docs/mcp-mode.md ↗</a></span>
     </div>
   </section>
 
