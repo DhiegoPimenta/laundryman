@@ -73,12 +73,12 @@ FAILED tests/test_email.py::test_send
 
 > Measured against real tool output. Not estimates.
 
-| Command | Before | After | Reduction |
-|---------|--------|-------|-----------|
-| `pytest -v` — 500 tests, 3 failures | 518 lines | 17 lines | **97% 🔥** |
-| `docker logs` — 1h of mixed logs | 17 lines | 3 lines | **82%** |
-| `cargo build` — 30 crates | 25 lines | 9 lines | **64%** |
-| `npm test` — jest, 300 tests | 31 lines | 21 lines | **32%** |
+| Command | Before | After | Noise injected into context |
+|---------|--------|-------|-----------------------------|
+| `pytest -v` — 500 tests, 3 failures | 518 lines | 17 lines | **up to 97% less noise injected into context** |
+| `docker logs` — 1h of mixed logs | 17 lines | 3 lines | **82% less** |
+| `cargo build` — 30 crates | 25 lines | 9 lines | **64% less** |
+| `npm test` — jest, 300 tests | 31 lines | 21 lines | **32% less** |
 
 ---
 
@@ -137,7 +137,7 @@ After every Bash call, `laundryman.js`:
 3. Applies targeted filters, strips noise, keeps signal
 4. Returns the compressed output as `additionalContext`
 
-Claude sees the clean version. The noisy original stays out of context.
+**Current limitation:** today laundryman uses `additionalContext`, which means the original noisy output still reaches Claude alongside the filtered version. In practice Claude anchors on the clean summary that appears first and treats the original as background. When Anthropic ships `replaceToolOutput`, the original will be suppressed entirely and savings will be total — [tracking issue #53330](https://github.com/anthropics/claude-code/issues/53330).
 
 ---
 

@@ -26,6 +26,8 @@
 
 const readline = require("readline");
 
+const MIN_LINES_TO_FILTER = 10;
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function countLines(text) {
@@ -159,7 +161,7 @@ function detectAndFilter(command, output) {
   if (/npm (test|run test)|jest|vitest|mocha/.test(cmd)) return filterNpmTest(output);
   if (/cargo (test|build|check)/.test(cmd))          return filterCargo(output);
   if (/docker/.test(cmd))                            return filterDocker(output);
-  if (/^git /.test(cmd))                             return filterGit(output);
+  if (/\bgit\s/.test(cmd))                             return filterGit(output);
 
   return filterGeneric(output);
 }
@@ -188,7 +190,7 @@ async function main() {
   const output  = payload.tool_response?.output || "";
 
   // Skip if output is tiny
-  if (countLines(output) < 10) process.exit(0);
+  if (countLines(output) < MIN_LINES_TO_FILTER) process.exit(0);
 
   const filtered = detectAndFilter(command, output);
   const header   = summarize(output, filtered);
@@ -208,4 +210,8 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+if (require.main === module) {
+  main().catch(() => process.exit(0));
+}
+
+module.exports = { filterPytest, filterNpmTest, filterCargo, filterDocker, filterGit, filterGeneric, detectAndFilter };
