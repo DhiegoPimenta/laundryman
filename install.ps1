@@ -16,6 +16,8 @@ $Settings       = "$env:USERPROFILE\.claude\settings.json"
 $RepoHook       = Join-Path $ScriptDir "hooks\laundryman.js"
 $RepoMcp        = Join-Path $ScriptDir "mcp\laundryman-mcp.js"
 $RepoPkg        = Join-Path $ScriptDir "package.json"
+$RepoCleaner    = Join-Path $ScriptDir "hooks\input-cleaner.js"
+$RepoDict       = Join-Path $ScriptDir "dictionary\stopwords.json"
 
 function Ok($msg)   { Write-Host "✓ $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "⚠  $msg" -ForegroundColor Yellow }
@@ -88,11 +90,14 @@ Ok "Hook copied to $HookFile"
 # Structure mirrors the repo so relative requires keep working:
 #   mcp\laundryman-mcp.js uses ..\hooks\laundryman.js → resolved correctly
 #   @modelcontextprotocol/sdk resolved from node_modules\ in this dir
-New-Item -ItemType Directory -Force -Path "$LaundrymanDir\mcp"   | Out-Null
-New-Item -ItemType Directory -Force -Path "$LaundrymanDir\hooks" | Out-Null
-Copy-Item $RepoMcp  "$LaundrymanDir\mcp\laundryman-mcp.js" -Force
-Copy-Item $RepoHook "$LaundrymanDir\hooks\laundryman.js"   -Force
-Copy-Item $RepoPkg  "$LaundrymanDir\package.json"          -Force
+New-Item -ItemType Directory -Force -Path "$LaundrymanDir\mcp"        | Out-Null
+New-Item -ItemType Directory -Force -Path "$LaundrymanDir\hooks"      | Out-Null
+New-Item -ItemType Directory -Force -Path "$LaundrymanDir\dictionary" | Out-Null
+Copy-Item $RepoMcp     "$LaundrymanDir\mcp\laundryman-mcp.js"          -Force
+Copy-Item $RepoHook    "$LaundrymanDir\hooks\laundryman.js"             -Force
+Copy-Item $RepoCleaner "$LaundrymanDir\hooks\input-cleaner.js"          -Force
+Copy-Item $RepoDict    "$LaundrymanDir\dictionary\stopwords.json"        -Force
+Copy-Item $RepoPkg     "$LaundrymanDir\package.json"                    -Force
 Say "Installing MCP dependencies in $LaundrymanDir..."
 Push-Location $LaundrymanDir
 npm install --silent 2>$null

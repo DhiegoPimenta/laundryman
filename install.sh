@@ -17,6 +17,8 @@ SETTINGS="$HOME/.claude/settings.json"
 REPO_HOOK="$SCRIPT_DIR/hooks/laundryman.js"
 REPO_MCP="$SCRIPT_DIR/mcp/laundryman-mcp.js"
 REPO_PKG="$SCRIPT_DIR/package.json"
+REPO_CLEANER="$SCRIPT_DIR/hooks/input-cleaner.js"
+REPO_DICT="$SCRIPT_DIR/dictionary/stopwords.json"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -99,10 +101,12 @@ ok "Hook copied to $HOOK_FILE"
 # Structure mirrors the repo so relative requires keep working:
 #   mcp/laundryman-mcp.js uses ../hooks/laundryman.js → resolved correctly
 #   @modelcontextprotocol/sdk resolved from node_modules/ in this dir
-mkdir -p "$LAUNDRYMAN_DIR/mcp" "$LAUNDRYMAN_DIR/hooks"
-cp "$REPO_MCP"  "$LAUNDRYMAN_DIR/mcp/laundryman-mcp.js"
-cp "$REPO_HOOK" "$LAUNDRYMAN_DIR/hooks/laundryman.js"
-cp "$REPO_PKG"  "$LAUNDRYMAN_DIR/package.json"
+mkdir -p "$LAUNDRYMAN_DIR/mcp" "$LAUNDRYMAN_DIR/hooks" "$LAUNDRYMAN_DIR/dictionary"
+cp "$REPO_MCP"     "$LAUNDRYMAN_DIR/mcp/laundryman-mcp.js"
+cp "$REPO_HOOK"    "$LAUNDRYMAN_DIR/hooks/laundryman.js"
+cp "$REPO_CLEANER" "$LAUNDRYMAN_DIR/hooks/input-cleaner.js"
+cp "$REPO_DICT"    "$LAUNDRYMAN_DIR/dictionary/stopwords.json"
+cp "$REPO_PKG"     "$LAUNDRYMAN_DIR/package.json"
 say "Installing MCP dependencies in $LAUNDRYMAN_DIR..."
 (cd "$LAUNDRYMAN_DIR" && npm install --silent 2>/dev/null)
 ok "MCP server installed at $MCP_FILE"
