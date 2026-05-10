@@ -1,0 +1,23 @@
+{
+  "greetings": {
+    "enabled": true,
+    "pt": ["bom dia", "boa tarde", "boa noite", "olá", "oi", "eai", "e aí", "tudo bem", "tudo bom"],
+    "en": ["hello", "hi", "hey", "good morning", "good afternoon"]
+  },
+  "punctuation": {
+    "enabled": true,
+    "description": "excessive punctuation and whitespace only — handled in code, not via phrase list"
+  },
+  "politeness": {
+    "enabled": false,
+    "description": "disabled by default — risk of semantic loss",
+    "pt": ["por favor", "por gentileza", "gostaria de"],
+    "en": ["please", "could you", "would you"]
+  },
+  "fillers": {
+    "enabled": false,
+    "description": "disabled by default — context-dependent meaning",
+    "pt": ["então", "tipo", "né", "sabe"],
+    "en": ["actually", "just", "I think", "maybe"]
+  }
+}
