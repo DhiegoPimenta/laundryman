@@ -88,6 +88,8 @@ Do not run pytest / jest / cargo test / docker logs directly via Bash.
 
 Full MCP reference and manual setup: [docs/mcp-mode.md](docs/mcp-mode.md)
 
+> If MCP stops working after moving or deleting the repo, run the installer again — it copies the server to `~/.claude/laundryman/` and restores the path in `settings.json`.
+
 ---
 
 ## 🔧 Hook mode — automatic, additive today

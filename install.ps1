@@ -7,12 +7,15 @@
 
 param([switch]$Uninstall)
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$HookDir   = "$env:USERPROFILE\.claude\hooks"
-$HookFile  = "$HookDir\laundryman.js"
-$Settings  = "$env:USERPROFILE\.claude\settings.json"
-$RepoHook  = Join-Path $ScriptDir "hooks\laundryman.js"
-$RepoMcp   = Join-Path $ScriptDir "mcp\laundryman-mcp.js"
+$ScriptDir      = Split-Path -Parent $MyInvocation.MyCommand.Path
+$HookDir        = "$env:USERPROFILE\.claude\hooks"
+$HookFile       = "$HookDir\laundryman.js"
+$LaundrymanDir  = "$env:USERPROFILE\.claude\laundryman"
+$McpFile        = "$LaundrymanDir\mcp\laundryman-mcp.js"
+$Settings       = "$env:USERPROFILE\.claude\settings.json"
+$RepoHook       = Join-Path $ScriptDir "hooks\laundryman.js"
+$RepoMcp        = Join-Path $ScriptDir "mcp\laundryman-mcp.js"
+$RepoPkg        = Join-Path $ScriptDir "package.json"
 
 function Ok($msg)   { Write-Host "✓ $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "⚠  $msg" -ForegroundColor Yellow }
@@ -35,36 +38,26 @@ Do not run pytest / jest / cargo test / docker logs directly via Bash.
 # ── Uninstall ──────────────────────────────────────────────────────────
 if ($Uninstall) {
     Say "🧺 laundryman — uninstalling..."
-    if (Test-Path $HookFile) { Remove-Item $HookFile -Force }
+    if (Test-Path $HookFile)       { Remove-Item $HookFile -Force }
+    if (Test-Path $LaundrymanDir)  { Remove-Item $LaundrymanDir -Recurse -Force }
 
     if (Test-Path $Settings) {
         $cfg = Get-Content $Settings -Raw | ConvertFrom-Json
 
-        # Remove PostToolUse hook
         if ($cfg.hooks -and $cfg.hooks.PostToolUse) {
             $filtered = @($cfg.hooks.PostToolUse | Where-Object {
                 ($_ | ConvertTo-Json -Compress) -notmatch "laundryman"
             })
-            if ($filtered.Count -gt 0) {
-                $cfg.hooks.PostToolUse = $filtered
-            } else {
-                $cfg.hooks.PSObject.Properties.Remove('PostToolUse')
-            }
+            if ($filtered.Count -gt 0) { $cfg.hooks.PostToolUse = $filtered }
+            else { $cfg.hooks.PSObject.Properties.Remove('PostToolUse') }
         }
-
-        # Remove UserPromptSubmit hook (in case installed from older version)
         if ($cfg.hooks -and $cfg.hooks.UserPromptSubmit) {
             $filtered = @($cfg.hooks.UserPromptSubmit | Where-Object {
                 ($_ | ConvertTo-Json -Compress) -notmatch "laundryman|input-cleaner"
             })
-            if ($filtered.Count -gt 0) {
-                $cfg.hooks.UserPromptSubmit = $filtered
-            } else {
-                $cfg.hooks.PSObject.Properties.Remove('UserPromptSubmit')
-            }
+            if ($filtered.Count -gt 0) { $cfg.hooks.UserPromptSubmit = $filtered }
+            else { $cfg.hooks.PSObject.Properties.Remove('UserPromptSubmit') }
         }
-
-        # Remove MCP server
         if ($cfg.mcpServers -and $cfg.mcpServers.PSObject.Properties['laundryman']) {
             $cfg.mcpServers.PSObject.Properties.Remove('laundryman')
         }
@@ -80,28 +73,31 @@ Say ""
 Say "🧺 laundryman — washing noisy Claude Code output"
 Say "──────────────────────────────────────────────"
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Err "Node.js not found. Install at https://nodejs.org"
-}
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Err "Node.js not found. Install at https://nodejs.org" }
 Ok "Node.js $(node --version) found"
 
 if (-not (Test-Path $RepoHook)) { Err "Cannot find hooks\laundryman.js — run install.ps1 from the cloned repo directory." }
 if (-not (Test-Path $RepoMcp))  { Err "Cannot find mcp\laundryman-mcp.js — run install.ps1 from the cloned repo directory." }
 
-# Install npm dependencies (MCP server needs @modelcontextprotocol/sdk)
-$pkgJson = Join-Path $ScriptDir "package.json"
-if (Test-Path $pkgJson) {
-    Say "Installing npm dependencies..."
-    Push-Location $ScriptDir
-    npm install --silent 2>$null
-    Pop-Location
-    Ok "Dependencies installed"
-}
-
-# Copy hook file
+# Copy PostToolUse hook to ~/.claude/hooks/
 New-Item -ItemType Directory -Force -Path $HookDir | Out-Null
 Copy-Item $RepoHook $HookFile -Force
 Ok "Hook copied to $HookFile"
+
+# Copy MCP server into self-contained ~/.claude/laundryman/
+# Structure mirrors the repo so relative requires keep working:
+#   mcp\laundryman-mcp.js uses ..\hooks\laundryman.js → resolved correctly
+#   @modelcontextprotocol/sdk resolved from node_modules\ in this dir
+New-Item -ItemType Directory -Force -Path "$LaundrymanDir\mcp"   | Out-Null
+New-Item -ItemType Directory -Force -Path "$LaundrymanDir\hooks" | Out-Null
+Copy-Item $RepoMcp  "$LaundrymanDir\mcp\laundryman-mcp.js" -Force
+Copy-Item $RepoHook "$LaundrymanDir\hooks\laundryman.js"   -Force
+Copy-Item $RepoPkg  "$LaundrymanDir\package.json"          -Force
+Say "Installing MCP dependencies in $LaundrymanDir..."
+Push-Location $LaundrymanDir
+npm install --silent 2>$null
+Pop-Location
+Ok "MCP server installed at $McpFile"
 
 # Load or create settings.json
 if (Test-Path $Settings) {
@@ -110,15 +106,13 @@ if (Test-Path $Settings) {
     $cfg = [PSCustomObject]@{}
 }
 
-# Ensure hooks object
+# PostToolUse hook
 if (-not $cfg.PSObject.Properties['hooks']) {
     $cfg | Add-Member -NotePropertyName hooks -NotePropertyValue ([PSCustomObject]@{})
 }
 if (-not $cfg.hooks.PSObject.Properties['PostToolUse']) {
     $cfg.hooks | Add-Member -NotePropertyName PostToolUse -NotePropertyValue @()
 }
-
-# Add PostToolUse hook if not already present
 $alreadyHook = $cfg.hooks.PostToolUse | Where-Object {
     ($_ | ConvertTo-Json -Compress) -match "laundryman"
 }
@@ -129,17 +123,14 @@ if (-not $alreadyHook) {
     $cfg.hooks.PostToolUse = @($cfg.hooks.PostToolUse) + @($hookEntry)
 }
 
-# Ensure mcpServers object
+# MCP server — always update path to the stable installed location
 if (-not $cfg.PSObject.Properties['mcpServers']) {
     $cfg | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([PSCustomObject]@{})
 }
-
-# Add MCP server if not already present
-if (-not $cfg.mcpServers.PSObject.Properties['laundryman']) {
-    $mcpEntry = [PSCustomObject]@{
-        command = "node"
-        args    = @($RepoMcp)
-    }
+$mcpEntry = [PSCustomObject]@{ command = "node"; args = @($McpFile) }
+if ($cfg.mcpServers.PSObject.Properties['laundryman']) {
+    $cfg.mcpServers.laundryman = $mcpEntry
+} else {
     $cfg.mcpServers | Add-Member -NotePropertyName laundryman -NotePropertyValue $mcpEntry
 }
 
@@ -178,5 +169,6 @@ if ($answer -match '^[Yy]') {
 
 Say ""
 Say "  Restart Claude Code to activate MCP mode."
+Say "  If MCP stops working, run .\install.ps1 again to restore paths."
 Say "  Uninstall anytime: .\install.ps1 -Uninstall"
 Say ""

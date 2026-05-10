@@ -93,3 +93,17 @@ npx @modelcontextprotocol/inspector node /path/to/laundryman/mcp/laundryman-mcp.
 ```
 
 Or connect directly via Claude Code after adding to `settings.json` and restarting.
+
+## If MCP stops working
+
+The installer copies the server to `~/.claude/laundryman/` — a stable path independent of where the repo lives. If MCP stops responding (e.g. after moving or deleting the repo), just run the installer again:
+
+```bash
+# macOS / Linux
+bash install.sh
+
+# Windows
+.\install.ps1
+```
+
+This re-copies the server files and updates `settings.json` with the correct path.
