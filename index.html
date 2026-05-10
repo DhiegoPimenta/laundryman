@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>laundryman — wash the noise, keep the signal</title>
-<meta name="description" content="PostToolUse hook for Claude Code. Washes noisy tool output. Keeps only errors, warnings and summaries. Up to 97% token reduction.">
+<meta name="description" content="Two hooks for Claude Code: PostToolUse filters noisy tool output (pytest, docker, cargo, npm). UserPromptSubmit strips greetings from prompts. Zero dependencies.">
 <meta property="og:title" content="laundryman — wash the noise, keep the signal">
-<meta property="og:description" content="PostToolUse hook for Claude Code. Up to 97% token reduction on pytest, cargo, docker, npm test.">
+<meta property="og:description" content="PostToolUse + UserPromptSubmit hooks for Claude Code. Filters tool noise and cleans user prompts. Zero dependencies.">
 <meta property="og:image" content="assets/laundryman.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
@@ -408,12 +408,12 @@
   <!-- HERO -->
   <section class="hero">
     <div>
-      <div class="pixel-tag">★ PostToolUse Hook · Claude Code ★</div>
+      <div class="pixel-tag">★ PostToolUse + UserPromptSubmit · Claude Code ★</div>
       <h1>wash the noise,<br><em>keep the signal</em></h1>
       <p class="hero-sub">
         Claude Code dumps thousands of PASSED lines into context on every test run.<br>
-        laundryman intercepts, filters, and hands Claude only what matters:<br>
-        failures, warnings, and summaries.
+        laundryman intercepts, filters, and hands Claude only what matters.<br>
+        A second hook strips greetings from prompts before they reach the model.
       </p>
       <div class="cta-row">
         <a href="#install" class="btn btn-primary">🧺 install now</a>
@@ -430,15 +430,15 @@
   <div class="stat-bar rev">
     <div class="stat-cell">
       <span class="stat-num">97%</span>
-      <div class="stat-lbl">pytest reduction</div>
+      <div class="stat-lbl">pytest noise filtered</div>
     </div>
     <div class="stat-cell">
       <span class="stat-num">82%</span>
-      <div class="stat-lbl">docker reduction</div>
+      <div class="stat-lbl">docker noise filtered</div>
     </div>
     <div class="stat-cell">
       <span class="stat-num">64%</span>
-      <div class="stat-lbl">cargo reduction</div>
+      <div class="stat-lbl">cargo noise filtered</div>
     </div>
     <div class="stat-cell">
       <span class="stat-num">0</span>
@@ -771,6 +771,13 @@
       </div>
     </div>
     <div class="road-item">
+      <span class="road-badge done">v0.1 ✓</span>
+      <div class="road-txt">
+        UserPromptSubmit hook — greetings filter with contributable dictionary
+        <small>Strips "olá, oi, hello, hey…" from prompts. <code>dictionary/stopwords.json</code> — add your language via PR.</small>
+      </div>
+    </div>
+    <div class="road-item">
       <span class="road-badge soon">next</span>
       <div class="road-txt">
         Custom rules via <code>.laundryman.json</code>
@@ -794,8 +801,8 @@
     <div class="road-item">
       <span class="road-badge wait">waiting</span>
       <div class="road-txt">
-        <code>replaceUserMessage</code> — input compression
-        <small>Same issue. laundryman will expand to cover input too when available.</small>
+        <code>replaceUserMessage</code> — true prompt replacement
+        <small>input-cleaner.js exists but uses additionalContext today. <a href="https://github.com/anthropics/claude-code/issues/53330" target="_blank">Track issue #53330 →</a></small>
       </div>
     </div>
   </section>

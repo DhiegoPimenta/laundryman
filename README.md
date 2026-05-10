@@ -6,11 +6,11 @@
 
 ### *wash the noise, keep the signal*
 
-**PostToolUse hook for Claude Code that cuts tool output noise by up to 97%**
+**Two hooks for Claude Code: filters noisy tool output and strips greetings from user prompts**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D16-brightgreen)](https://nodejs.org)
-[![Claude Code](https://img.shields.io/badge/Claude_Code-PostToolUse-4af0c4)](https://docs.anthropic.com/claude-code)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-PostToolUse%20%2B%20UserPromptSubmit-4af0c4)](https://docs.anthropic.com/claude-code)
 [![Zero deps](https://img.shields.io/badge/dependencies-0-blue)](package.json)
 
 [🌐 **dhiegopimenta.github.io/laundryman**](https://dhiegopimenta.github.io/laundryman/) · [⚡ Install](#install) · [📊 Benchmarks](#benchmarks) · [🤝 Contributing](CONTRIBUTING.md)
@@ -65,7 +65,7 @@ FAILED tests/test_email.py::test_send
 3 failed, 497 passed in 45.3s
 ```
 
-**Claude sees the 17 lines. Never knew the other 501 existed.**
+**The clean 17-line summary arrives first — the 501 PASSED lines follow in the background, down-weighted by position.**
 
 ---
 
@@ -137,6 +137,14 @@ After every Bash call, `laundryman.js`:
 3. Applies targeted filters, strips noise, keeps signal
 4. Returns the compressed output as `additionalContext`
 
+`input-cleaner.js` registers as a second hook on `UserPromptSubmit` and strips greetings before each message:
+
+1. Loads `dictionary/stopwords.json` — extensible, case-insensitive, no hardcoded patterns
+2. Matches phrases longest-first (prevents partial matches — `"bom dia"` before `"bom"`)
+3. Returns cleaned prompt as `additionalContext`
+
+Categories `politeness` and `fillers` are disabled by default due to semantic risk. See [`dictionary/CONTRIBUTING.md`](dictionary/CONTRIBUTING.md) to add words or new languages.
+
 **Current limitation:** today laundryman uses `additionalContext`, which means the original noisy output still reaches Claude alongside the filtered version. In practice Claude anchors on the clean summary that appears first and treats the original as background. When Anthropic ships `replaceToolOutput`, the original will be suppressed entirely and savings will be total — [tracking issue #53330](https://github.com/anthropics/claude-code/issues/53330).
 
 ---
@@ -159,10 +167,11 @@ After every Bash call, `laundryman.js`:
 > **Current limitation:** `PostToolUse` supports `additionalContext` but not full output replacement. The original noisy output still reaches Claude alongside the clean version. When Anthropic ships `replaceToolOutput`, savings go from ~70% to ~99% effective.
 
 - [x] `PostToolUse` hook — pytest, npm, cargo, docker, git
+- [x] `UserPromptSubmit` hook — greetings filter with contributable `dictionary/stopwords.json`
 - [ ] Custom rules via `.laundryman.json` — per-project filter config
 - [ ] More tool filters — gradle, make, dotnet test, go test, mvn
 - [ ] `replaceToolOutput` support *(waiting on Anthropic — [issue #53330](https://github.com/anthropics/claude-code/issues/53330))*
-- [ ] `replaceUserMessage` input compression *(waiting on Anthropic)*
+- [ ] `replaceUserMessage` — will unlock true prompt replacement for input-cleaner *(waiting on Anthropic — [issue #53330](https://github.com/anthropics/claude-code/issues/53330))*
 
 ---
 
