@@ -203,10 +203,24 @@ PRs welcome — especially new tool filters! Open an issue to request your stack
 
 ### O problema
 
-Toda vez que o Claude Code roda um comando, o **output inteiro** vai pro contexto.
+Toda vez que o Claude Code roda um comando, o **output inteiro** vai pro contexto — incluindo milhares de linhas que você não precisa.
 
 ```
-pytest -v → 518 linhas → 501 linhas de PASSED → 17 falhas reais
+$ pytest -v
+
+platform linux -- Python 3.11.4, pytest-7.4.0
+rootdir: /home/user/myprojeto
+collecting ... 500 items
+
+PASSED tests/test_models.py::test_user_0 ..... 0.001s   ← ruído
+PASSED tests/test_models.py::test_user_1 ..... 0.001s   ← ruído
+PASSED tests/test_models.py::test_user_2 ..... 0.002s   ← ruído
+... (495 linhas de ruído a mais) ...
+FAILED tests/test_auth.py::test_login       ← isso é o que importa
+FAILED tests/test_payment.py::test_charge   ← isso é o que importa
+FAILED tests/test_email.py::test_send       ← isso é o que importa
+
+→ 518 linhas enviadas pro Claude. 501 eram ruído.
 → ~8.000 tokens queimados. Em. Cada. Execução.
 ```
 
@@ -217,29 +231,107 @@ pytest -v → 518 linhas → 501 linhas de PASSED → 17 falhas reais
 O laundryman intercepta o output via hook `PostToolUse` e entrega só o que importa.
 
 ```
-pytest -v  →  518 linhas entram  →  17 saem  (97% lavado 🧺)
+$ pytest -v   →   518 linhas entram   →   17 saem
+
+[🧺 laundryman] 518 linhas → 17 linhas (97% lavado)
+
+FAILED tests/test_auth.py::test_login
+  AssertionError: assert 200 == 401
+
+FAILED tests/test_payment.py::test_charge
+  KeyError: "stripe_secret" not found in environment
+
+FAILED tests/test_email.py::test_send
+  SMTPException: Connection refused smtp.mailgun.org:587
+
+3 failed, 497 passed in 45.3s
 ```
+
+Além disso, um segundo hook remove saudações dos prompts antes de chegarem ao modelo.
+
+### Benchmarks
+
+> Medido contra output real de ferramentas. Não são estimativas.
+
+| Comando | Antes | Depois | Redução de ruído no contexto |
+|---------|-------|--------|------------------------------|
+| `pytest -v` — 500 testes, 3 falhas | 518 linhas | 17 linhas | **até 97% menos ruído** |
+| `docker logs` — 1h de logs mistos | 17 linhas | 3 linhas | **82% menos** |
+| `cargo build` — 30 crates | 25 linhas | 9 linhas | **64% menos** |
+| `npm test` — jest, 300 testes | 31 linhas | 21 linhas | **32% menos** |
 
 ### Instalar
 
+**macOS / Linux / WSL:**
 ```bash
-# macOS / Linux / WSL
 bash <(curl -s https://raw.githubusercontent.com/dhiegopimenta/laundryman/main/install.sh)
+```
 
-# Windows
+**Windows (PowerShell):**
+```powershell
 irm https://raw.githubusercontent.com/dhiegopimenta/laundryman/main/install.ps1 | iex
+```
 
-# npx skills
+**via npx skills:**
+```bash
 npx skills add dhiegopimenta/laundryman
+```
+
+**Manual:**
+```bash
+git clone https://github.com/dhiegopimenta/laundryman
+cd laundryman && bash install.sh
+```
+
+**Desinstalar:**
+```bash
+bash install.sh --uninstall
+# Windows: .\install.ps1 -Uninstall
 ```
 
 ### Como funciona
 
-O hook é registrado em `~/.claude/settings.json` e roda automaticamente após cada comando Bash no Claude Code. Sem configuração adicional.
+O laundryman registra dois hooks em `~/.claude/settings.json`:
+
+**Hook 1 — PostToolUse** (`hooks/laundryman.js`): após cada comando Bash, lê o output, detecta o tipo de comando (pytest / npm / cargo / docker / git / genérico), aplica filtros direcionados e devolve o output comprimido como `additionalContext`.
+
+**Hook 2 — UserPromptSubmit** (`hooks/input-cleaner.js`): antes de cada mensagem, carrega `dictionary/stopwords.json`, remove saudações e frases de preenchimento usando matching longest-first, e devolve o prompt limpo.
+
+**Servidor MCP** (`mcp/laundryman-mcp.js`): quando o Claude chama uma ferramenta MCP, o conteúdo retornado É o resultado — sem output original junto. Isso dá substituição real hoje, sem esperar pela Anthropic. Configure em [`docs/mcp-mode.md`](docs/mcp-mode.md).
+
+### Dois modos
+
+| Modo | Como | Hoje | Futuro |
+|------|------|------|--------|
+| 🔧 **Hook** (automático) | PostToolUse em todo Bash | `additionalContext` — original ainda chega junto | `replaceToolOutput` → substituição real |
+| 🚀 **MCP** (opt-in, **melhor hoje**) | Claude chama `laundryman:run_tests` | **Substituição real — funciona agora** | Igual, já ótimo |
+| ⚡ **Hook v2** (em breve) | Automático, sem instrução | — | `updatedBuiltinToolOutput` |
+
+**O modo MCP é a opção de maior valor hoje.** Quando o Claude chama uma ferramenta MCP, o conteúdo retornado É o resultado — sem ruído original junto. Veja [docs/mcp-mode.md](docs/mcp-mode.md).
+
+### O que é lavado
+
+| Ferramenta | Ruído removido | Sinal mantido |
+|-----------|---------------|---------------|
+| `pytest` | Linhas PASSED, pontos, info de plataforma, rootdir, plugins | FAILED, ERROR, tracebacks, resumo |
+| `npm test` / jest | ✓ testes passando, timing por teste | ✗ falhas, console.error, resumo |
+| `cargo build` | Compiling X, Downloaded, Updating | warnings, errors |
+| `docker logs` | INFO healthchecks, access logs | ERROR, WARN, FATAL |
+| `git` | Clusters de linhas em branco | tudo o mais |
+| outros | Códigos ANSI, clusters em branco | todo o conteúdo |
+
+### Roadmap
+
+- [x] Hook `PostToolUse` — pytest, npm, cargo, docker, git
+- [x] Hook `UserPromptSubmit` — filtro de saudações com `dictionary/stopwords.json` contributável
+- [x] Servidor MCP — `run_tests` + `run_docker_logs` com substituição real de output
+- [ ] Regras customizadas via `.laundryman.json` — config de filtros por projeto
+- [ ] Mais filtros de ferramentas — gradle, make, dotnet test, go test, mvn
+- [ ] Suporte a `replaceToolOutput` *(aguardando Anthropic — [issue #53330](https://github.com/anthropics/claude-code/issues/53330))*
 
 ### Contribuindo
 
-PRs bem-vindos! Para adicionar um filtro novo, veja o [CONTRIBUTING.md](CONTRIBUTING.md).
+PRs bem-vindos! Para adicionar um filtro novo, veja o [CONTRIBUTING.md](CONTRIBUTING.md). Para adicionar palavras ao dicionário, veja [`dictionary/CONTRIBUTING.md`](dictionary/CONTRIBUTING.md).
 
 </details>
 

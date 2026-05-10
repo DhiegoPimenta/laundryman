@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>laundryman — wash the noise, keep the signal</title>
-<meta name="description" content="Two hooks for Claude Code: PostToolUse filters noisy tool output (pytest, docker, cargo, npm). UserPromptSubmit strips greetings from prompts. Zero dependencies.">
+<meta name="description" content="Two hooks + MCP server for Claude Code: PostToolUse filters noisy tool output (pytest, docker, cargo, npm, jest). UserPromptSubmit strips greetings from prompts. MCP mode gives true output replacement today.">
 <meta property="og:title" content="laundryman — wash the noise, keep the signal">
-<meta property="og:description" content="PostToolUse + UserPromptSubmit hooks for Claude Code. Filters tool noise and cleans user prompts. Zero dependencies.">
+<meta property="og:description" content="PostToolUse + UserPromptSubmit hooks + MCP server for Claude Code. Filters tool noise, cleans prompts, true replacement via MCP. 1 dependency.">
 <meta property="og:image" content="assets/laundryman.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
@@ -401,19 +401,20 @@
       <a href="#benchmarks">benchmarks</a>
       <a href="#demo">demo</a>
       <a href="#install">install</a>
-      <a href="https://github.com/dhiegopimenta/laundryman">github ↗</a>
+      <a href="https://github.com/dhiegopimenta/laundryman/blob/main/docs/mcp-mode.md" target="_blank">mcp docs ↗</a>
+      <a href="https://github.com/dhiegopimenta/laundryman" target="_blank">github ↗</a>
     </div>
   </nav>
 
   <!-- HERO -->
   <section class="hero">
     <div>
-      <div class="pixel-tag">★ PostToolUse + UserPromptSubmit · Claude Code ★</div>
+      <div class="pixel-tag">★ PostToolUse · UserPromptSubmit · MCP · Claude Code ★</div>
       <h1>wash the noise,<br><em>keep the signal</em></h1>
       <p class="hero-sub">
         Claude Code dumps thousands of PASSED lines into context on every test run.<br>
         laundryman intercepts, filters, and hands Claude only what matters.<br>
-        A second hook strips greetings from prompts before they reach the model.
+        A second hook strips greetings from prompts. An MCP server gives true output replacement today.
       </p>
       <div class="cta-row">
         <a href="#install" class="btn btn-primary">🧺 install now</a>
@@ -458,7 +459,12 @@
       <p>
         Every time you run a test suite, laundryman intercepts the output via
         Claude Code's PostToolUse hook — strips the noise, keeps the failures,
-        and hands Claude a clean report.
+        and hands Claude a clean report. A second hook silently cleans your prompts.
+      </p>
+      <p>
+        For true output replacement right now — no original noise at all — the MCP server
+        returns only the filtered result. Hook mode gets there automatically when
+        Anthropic ships <code style="color:var(--yellow);font-size:10px">replaceToolOutput</code>.
       </p>
       <p style="color: var(--accent);">
         518 lines in → 17 lines out. 97% washed. 🧺
@@ -753,10 +759,54 @@
           </div>
           <div class="install-note">
             Uninstall: <code>bash install.sh --uninstall</code><br>
-            Zero dependencies. Pure Node.js built-ins only.
+            1 dependency: <code>@modelcontextprotocol/sdk</code> (MCP server only). Hook mode needs no deps.
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="roadmap rev" style="margin-bottom:72px">
+    <div class="sec-label">how it works — three modes</div>
+
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:11px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:10px 16px;color:var(--muted);font-weight:400">Mode</th>
+            <th style="text-align:left;padding:10px 16px;color:var(--muted);font-weight:400">How</th>
+            <th style="text-align:left;padding:10px 16px;color:var(--muted);font-weight:400">Today</th>
+            <th style="text-align:left;padding:10px 16px;color:var(--muted);font-weight:400">Future</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:14px 16px;color:var(--text)">🔧 <b>Hook</b> (automatic)</td>
+            <td style="padding:14px 16px;color:var(--muted)">PostToolUse fires on every Bash call</td>
+            <td style="padding:14px 16px;color:var(--yellow)">additionalContext — original still reaches Claude</td>
+            <td style="padding:14px 16px;color:var(--accent)">replaceToolOutput ships → true replacement</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:14px 16px;color:var(--accent)">🚀 <b>MCP</b> (opt-in, best today)</td>
+            <td style="padding:14px 16px;color:var(--muted)">Claude calls <code>laundryman:run_tests</code></td>
+            <td style="padding:14px 16px;color:var(--accent)"><b>True replacement — works now</b></td>
+            <td style="padding:14px 16px;color:var(--accent)">Same, already optimal</td>
+          </tr>
+          <tr>
+            <td style="padding:14px 16px;color:var(--muted)">⚡ Hook v2 (coming)</td>
+            <td style="padding:14px 16px;color:var(--muted)">Automatic, no instruction needed</td>
+            <td style="padding:14px 16px;color:var(--muted)">—</td>
+            <td style="padding:14px 16px;color:var(--muted)">updatedBuiltinToolOutput</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:20px;padding:16px 20px;background:var(--surface);border:1px solid rgba(74,240,196,.2);border-radius:4px;font-family:'Space Mono',monospace;font-size:11px;line-height:1.8;color:var(--muted)">
+      <span style="color:var(--accent)">Hook mode today:</span> original 518 lines + 17 lines filtered = 535 lines to Claude<br>
+      <span style="color:var(--accent)">MCP mode today:</span> 17 lines filtered only = 17 lines to Claude<br>
+      <span style="color:var(--muted)">Setup MCP → <a href="https://github.com/dhiegopimenta/laundryman/blob/main/docs/mcp-mode.md" style="color:var(--accent);text-decoration:none" target="_blank">docs/mcp-mode.md ↗</a></span>
     </div>
   </section>
 
